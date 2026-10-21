@@ -8,6 +8,15 @@ Infra health dashboard: a FastAPI backend collects host metrics with psutil plus
 ![React 18](https://img.shields.io/badge/react-18.3-61dafb)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
+## Try it live
+
+| | |
+|---|---|
+| API reference | https://akibullah.github.io/realtime-monitoring-dashboard/ — Swagger UI rendered from the exported `openapi.json` (static; the Codespace runs the real service and WebSocket stream) |
+| Run in your browser | [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/AkibUllah/realtime-monitoring-dashboard?quickstart=1) — starts the collector API (real host metrics of the Codespace plus the simulated fleet) and the Vite dev server; open port 5173 for the dashboard and port 8000 for `/docs` |
+| One-click deploy | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/AkibUllah/realtime-monitoring-dashboard) — API and nginx-served dashboard from `render.yaml`; the dashboard proxies `/api` and `/ws` to the API over Render's private network |
+| Local | `docker compose up --build -d` then http://localhost:8080 (see Quick Start) |
+
 ## Why this exists
 
 Operating a private cloud means staring at compute nodes all day: which hypervisor is saturating, which one quietly stopped sending traffic, whether a disk has been filling for a week. Full Prometheus + Grafana is the right answer at scale, but the moving parts are worth understanding from the inside: a collector loop, a bounded time-series store, alert state that does not flap, and a push channel to the browser that survives reconnects. This project is that pipeline end to end, small enough to read in an afternoon and realistic enough to run on a laptop against its own host metrics.
@@ -140,7 +149,7 @@ realtime-monitoring-dashboard/
 │   │   ├── components/     # MetricChart, NodeGrid, AlertsPanel, TimeRangeSelector, ConnectionBadge
 │   │   ├── hooks/useMetricsSocket.ts
 │   │   └── lib/            # metrics reducer, format, backoff, api, types
-│   ├── Dockerfile · nginx.conf
+│   ├── Dockerfile · nginx.conf.template
 ├── nginx/nginx.conf        # reverse proxy with WebSocket upgrade
 ├── docker-compose.yml
 └── .github/workflows/ci.yml

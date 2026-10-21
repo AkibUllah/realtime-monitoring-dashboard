@@ -1,0 +1,51 @@
+# Render blueprint: the collector API and the nginx-served dashboard. The dashboard proxies /api
+# and /ws to the API over Render's private network, so the browser talks to one origin and the
+# WebSocket stream works without CORS. Metrics live in memory (ring buffers); SQLite persistence
+# is off because the free tier has no disk.
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: realtime-monitoring-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: FLEET_SIZE
+        value: "8"
+      - key: COLLECT_INTERVAL_SECONDS
+        value: "2"
+      - key: RING_CAPACITY
+        value: "1800"
+      - key: SQLITE_PATH
+        value: ""
+      - key: HOST_COLLECTOR_ENABLED
+        value: "true"
+      - key: LOG_LEVEL
+        value: INFO
+
+  - type: web
+    name: realtime-monitoring-web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "80"
+      - key: API_HOST
+        fromService:
+          name: realtime-monitoring-api
+          type: web
+          property: host
+      - key: API_PORT
+        fromService:
+          name: realtime-monitoring-api
+          type: web
+          property: port
