@@ -1,3 +1,4 @@
+<!-- topics: fastapi,react,typescript,websocket,monitoring,real-time,recharts,alerting,observability,docker -->
 # Realtime Monitoring Dashboard
 
 Infra health dashboard: a FastAPI backend collects host metrics with psutil plus a simulated node fleet, keeps them in ring buffers with optional SQLite persistence, evaluates threshold-for-duration alert rules, and streams everything over WebSocket to a React + Recharts dark-theme UI.
