@@ -4,6 +4,8 @@
 Infra health dashboard: a FastAPI backend collects host metrics with psutil plus a simulated node fleet, keeps them in ring buffers with optional SQLite persistence, evaluates threshold-for-duration alert rules, and streams everything over WebSocket to a React + Recharts dark-theme UI.
 
 [![CI](https://github.com/AkibUllah/realtime-monitoring-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/AkibUllah/realtime-monitoring-dashboard/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/AkibUllah/realtime-monitoring-dashboard/actions/workflows/codeql.yml/badge.svg)](https://github.com/AkibUllah/realtime-monitoring-dashboard/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/AkibUllah/realtime-monitoring-dashboard)](https://github.com/AkibUllah/realtime-monitoring-dashboard/releases)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![React 18](https://img.shields.io/badge/react-18.3-61dafb)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
@@ -16,6 +18,24 @@ Infra health dashboard: a FastAPI backend collects host metrics with psutil plus
 | Run in your browser | [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/AkibUllah/realtime-monitoring-dashboard?quickstart=1) — starts the collector API (real host metrics of the Codespace plus the simulated fleet) and the Vite dev server; open port 5173 for the dashboard and port 8000 for `/docs` |
 | One-click deploy | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/AkibUllah/realtime-monitoring-dashboard) — API and nginx-served dashboard from `render.yaml`; the dashboard proxies `/api` and `/ws` to the API over Render's private network |
 | Local | `docker compose up --build -d` then http://localhost:8080 (see Quick Start) |
+
+## Screenshots
+
+![Dashboard streaming live metrics over WebSocket, then switching time ranges](docs/images/live.gif)
+
+*The dashboard running locally against the collector API: cards and charts update every tick over the WebSocket, then the 15m and 1h ranges load history.*
+
+![Dark dashboard with fleet averages, node cards, active alerts, rules and CPU/memory charts](docs/images/dashboard.png)
+
+*Fleet view during a simulated CPU incident on node-05: firing and resolved alerts, the rule list and per-node charts.*
+
+![Swagger UI listing the metrics and alerts endpoints](docs/images/api-reference.png)
+
+*API reference on GitHub Pages.*
+
+![Terminal running a curl session: health, node list, downsampled history, creating an alert rule and the notifications it fired](docs/images/curl-session.png)
+
+*A real curl session against the API on a local port: node status, 10-second downsampled history, a new rule and the FIRING notifications it produced a few seconds later.*
 
 ## Why this exists
 
@@ -166,11 +186,11 @@ Backend: ring buffer eviction, ordering and downsampling; SQLite round-trip, pru
 
 ## Roadmap
 
-- Pluggable collectors for remote agents (push over HTTP) and an OpenStack Nova hypervisor stats collector
-- Webhook / email notifier behind the notification log
-- Per-rule silences and maintenance windows
-- Server-side downsampled history for the 1h range to shrink the snapshot payload
-- Auth on the rules API
+- [ ] Pluggable collectors for remote agents (push over HTTP) and an OpenStack Nova hypervisor stats collector (#1)
+- [ ] Webhook / email notifier behind the notification log (#2)
+- [ ] Per-rule silences and maintenance windows (#3)
+- [ ] Server-side downsampled history for the 1h range to shrink the snapshot payload (#4)
+- [ ] Auth on the rules API (#5)
 
 ## License
 
