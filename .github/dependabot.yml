@@ -35,6 +35,10 @@ updates:
         update-types: ["minor", "patch"]
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      # Toolchain is pinned to Node 18; majors are adopted in deliberate upgrade PRs.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directory: "/backend"
