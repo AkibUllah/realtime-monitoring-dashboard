@@ -11,7 +11,7 @@ license = { text = "MIT" }
 authors = [{ name = "Akib Jafor" }]
 dependencies = [
   "fastapi>=0.115,<0.161",
-  "uvicorn[standard]>=0.32,<0.33",
+  "uvicorn[standard]>=0.32,<0.55",
   "pydantic>=2.9,<3",
   "pydantic-settings>=2.6,<3",
   "psutil>=6.0,<8",
