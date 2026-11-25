@@ -55,6 +55,8 @@ export type Point = [number, number];
 
 export interface SnapshotMessage {
   type: 'snapshot';
+  /** Epoch-aligned history bucket size; absent for older servers. */
+  step?: number;
   ts: number;
   nodes: NodeSnapshot[];
   history: Record<string, Partial<Record<Metric, Point[]>>>;

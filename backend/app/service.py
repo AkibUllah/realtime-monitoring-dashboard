@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import time
 from typing import Any
 
@@ -148,6 +149,10 @@ class MonitoringService:
 
     # ---- read side -------------------------------------------------------------------
     def snapshot(self, history_seconds: float = 300, step: float | None = None) -> dict[str, Any]:
+        # Inclusive, epoch-aligned buckets can span one more bucket than the
+        # range/step ratio. Reserve that boundary bucket to stay at 300 points.
+        if step is None:
+            step = max(self.settings.collect_interval_seconds, math.ceil(history_seconds / 299))
         now = time.time()
         nodes = self.store.nodes()
         history: dict[str, dict[str, list[list[float]]]] = {}
@@ -163,6 +168,7 @@ class MonitoringService:
             }
         return {
             "type": "snapshot",
+            "step": step,
             "ts": now,
             "nodes": [n.to_dict() for n in nodes],
             "history": history,

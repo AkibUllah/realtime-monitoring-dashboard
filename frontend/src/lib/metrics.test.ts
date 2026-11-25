@@ -15,6 +15,24 @@ const snapshot: SnapshotMessage = {
 };
 
 describe('metricsReducer', () => {
+  it('keeps bucket averages and appends only live points after a sampled snapshot', () => {
+    const sampled: SnapshotMessage = {
+      ...snapshot, step: 13, ts: 1010,
+      history: { 'node-01': { cpu: [[988, 20], [1001, 40]] } },
+      nodes: [node('node-01', 1008, 90)],
+    };
+    let s = metricsReducer(initialMetricsState(), { type: 'message', message: sampled });
+    expect(s.series['node-01'].cpu).toEqual([[988, 20], [1001, 40]]);
+    expect(s.nodes['node-01'].metrics.cpu).toBe(90);
+    const tick: TickMessage = { type: 'tick', ts: 1012, nodes: [node('node-01', 1012, 60)], alerts: [], notifications: [] };
+    s = metricsReducer(s, { type: 'message', message: { ...tick, ts: 1008, nodes: [node('node-01', 1008, 90)] } });
+    expect(s.series['node-01'].cpu).toEqual([[988, 20], [1001, 40]]);
+    s = metricsReducer(s, { type: 'message', message: tick });
+    s = metricsReducer(s, { type: 'message', message: tick });
+    expect(s.series['node-01'].cpu).toEqual([[988, 20], [1001, 40], [1012, 60]]);
+    s = metricsReducer(s, { type: 'message', message: { ...sampled, ts: 1023, history: { 'node-01': { cpu: [[1001, 50], [1014, 70]] } }, nodes: [node('node-01', 1022, 80)] } });
+    expect(s.series['node-01'].cpu).toEqual([[1001, 50], [1014, 70]]);
+  });
   it('loads history and appends the snapshot tick', () => {
     const s = metricsReducer(initialMetricsState(), { type: 'message', message: snapshot });
     expect(s.series['node-01'].cpu).toEqual([[996, 20], [998, 25], [1000, 30]]);
