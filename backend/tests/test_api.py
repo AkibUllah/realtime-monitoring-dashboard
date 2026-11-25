@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import time
+from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -128,3 +130,45 @@ def test_websocket_snapshot_then_live_ticks(client: TestClient) -> None:
         ws.send_text('{"type":"ping"}')
         assert ws.receive_json()["type"] == "pong"
     assert client.app.state.service.broadcaster.client_count == 0  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize("now", [7200, 7201])
+def test_snapshot_auto_downsamples_hour_and_preserves_bucket_average(
+    client: TestClient, now: int
+) -> None:
+    from app.models import NodeSnapshot, NodeStatus
+
+    svc = client.app.state.service
+    for ts in range(now - 3598, now, 2):
+        svc.store.record(
+            NodeSnapshot(
+                node_id="sample",
+                name="sample",
+                region="test",
+                role="api",
+                status=NodeStatus.HEALTHY,
+                ts=ts,
+                metrics={"cpu": float(ts % 100)},
+            )
+        )
+    with patch("app.service.time.time", return_value=now):
+        response = client.get("/api/snapshot", params={"range": "1h"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["step"] == 13
+    points = body["history"]["sample"]["cpu"]
+    assert len(points) <= 300
+    for bucket_ts, value in points:
+        samples = [
+            float(ts % 100) for ts in range(now - 3598, now, 2) if int(ts // 13) * 13 == bucket_ts
+        ]
+        assert value == round(sum(samples) / len(samples), 3)
+    with patch("app.service.time.time", return_value=now):
+        explicit = client.get("/api/snapshot", params={"range": "1h", "step": 60}).json()
+    assert explicit["step"] == 60
+    assert len(explicit["history"]["sample"]["cpu"]) <= 61
+
+
+@pytest.mark.parametrize("step", [0, -1, "invalid"])
+def test_snapshot_rejects_invalid_step(client: TestClient, step: object) -> None:
+    assert client.get("/api/snapshot", params={"step": step}).status_code == 422

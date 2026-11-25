@@ -85,8 +85,12 @@ def history(
 
 
 @router.get("/api/snapshot", tags=["metrics"])
-def snapshot(request: Request, range: str = Query("5m")) -> dict:
-    return service(request).snapshot(history_seconds=parse_range(range))
+def snapshot(
+    request: Request,
+    range: str = Query("5m"),
+    step: float | None = Query(None, gt=0, description="override snapshot bucket size in seconds"),
+) -> dict:
+    return service(request).snapshot(history_seconds=parse_range(range), step=step)
 
 
 @router.get("/api/alerts", tags=["alerts"])

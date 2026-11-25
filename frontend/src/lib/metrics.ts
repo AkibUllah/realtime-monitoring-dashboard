@@ -34,9 +34,10 @@ function trim(points: Point[], cutoff: number): Point[] {
   return i === 0 ? points : points.slice(i);
 }
 
-function appendTick(series: MetricsState['series'], nodes: NodeSnapshot[], cutoff: number): MetricsState['series'] {
+function appendTick(series: MetricsState['series'], nodes: NodeSnapshot[], cutoff: number, afterTs = -Infinity): MetricsState['series'] {
   const next: MetricsState['series'] = { ...series };
   for (const node of nodes) {
+    if (node.ts <= afterTs) continue;
     const current = { ...(next[node.node_id] ?? {}) };
     for (const metric of METRICS) {
       const value = node.metrics[metric];
@@ -84,7 +85,9 @@ export function metricsReducer(state: MetricsState, action: MetricsAction): Metr
         return {
           ...state,
           nodes,
-          series: appendTick(series, msg.nodes, cutoff),
+          // Sampled history already contains the latest node samples in its
+          // final bucket. Appending them again would mix duplicates with averages.
+          series: appendTick(series, msg.nodes, cutoff, msg.step ? msg.ts : -Infinity),
           alerts: msg.alerts,
           rules: msg.rules,
           notifications: [...msg.notifications].sort((a, b) => b.id - a.id).slice(0, MAX_NOTIFICATIONS),
@@ -94,10 +97,10 @@ export function metricsReducer(state: MetricsState, action: MetricsAction): Metr
       return {
         ...state,
         nodes,
-        series: appendTick(state.series, msg.nodes, cutoff),
+        series: appendTick(state.series, msg.nodes, cutoff, state.lastTs ?? -Infinity),
         alerts: msg.alerts,
         notifications: mergeNotifications(state.notifications, msg.notifications),
-        lastTs: msg.ts,
+        lastTs: Math.max(state.lastTs ?? msg.ts, msg.ts),
       };
     }
     default:

@@ -142,7 +142,7 @@ Set `FLEET_SIZE=0` to monitor only the real host, or `HOST_COLLECTOR_ENABLED=fal
 | GET | `/api/nodes` | Latest snapshot per node |
 | GET | `/api/metrics` | Metric catalogue with units |
 | GET | `/api/metrics/history?node=&metric=&range=15m&step=10` | Points `[[ts, value], …]`, optional bucket averaging |
-| GET | `/api/snapshot?range=5m` | What a WebSocket client receives on connect |
+| GET | `/api/snapshot?range=5m&step=10` | What a WebSocket client receives on connect |
 | GET | `/api/alerts` | Active (firing/resolved) alert states |
 | GET / POST | `/api/alerts/rules` | List / create rules |
 | PATCH / DELETE | `/api/alerts/rules/{id}` | Update / delete a rule |
@@ -189,9 +189,38 @@ Backend: ring buffer eviction, ordering and downsampling; SQLite round-trip, pru
 - [ ] Pluggable collectors for remote agents (push over HTTP) and an OpenStack Nova hypervisor stats collector (#1)
 - [ ] Webhook / email notifier behind the notification log (#2)
 - [ ] Per-rule silences and maintenance windows (#3)
-- [ ] Server-side downsampled history for the 1h range to shrink the snapshot payload (#4)
+- [x] Server-side downsampled history for the 1h range to shrink the snapshot payload (#4)
 - [ ] Auth on the rules API (#5)
 
 ## License
 
 MIT © 2026 Akib Jafor
+
+
+### Snapshot history resolution
+
+`GET /api/snapshot?range=1h` chooses an epoch-aligned bucket size automatically:
+`max(collect_interval_seconds, ceil(range_seconds / 299))`. Reserving a boundary
+bucket keeps inclusive history at no more than 300 points per series. An explicit
+positive `step` query parameter overrides this choice; the response includes the
+chosen `step` in seconds. The WebSocket bootstrap snapshot uses the same rule.
+
+Each bucket is the existing store's arithmetic mean, timestamped at the bucket
+start. On reconnect the frontend replaces history with these authoritative
+averages, then appends only subsequent live samples. It does not re-average an
+aggregate with unknown sample counts or append replayed samples already covered
+by the snapshot. Latest-value cards still use the raw node snapshot.
+
+A deterministic six-node default fleet (five metrics, two-second collection,
+1,800 samples per series, seed 42, host collector disabled) measured the following
+compact UTF-8 JSON snapshot sizes. Both versions use the same simulated data and
+clock; these numbers exclude HTTP compression and WebSocket framing:
+
+| History range | Raw bytes | Automatic step | Downsampled bytes | Points per series, before → after |
+| --- | ---: | ---: | ---: | --- |
+| 15 minutes | 277,438 | 4 seconds | 148,701 | 450 → 225 |
+| 1 hour | 1,066,563 | 13 seconds | 184,172 | 1,800 → 278 |
+
+The measured payload reductions are 46.4% and 82.7%, respectively. Live ticks keep
+their original collection resolution; this change bounds bootstrap history, not
+the number of raw live points accumulated within the retention window.
